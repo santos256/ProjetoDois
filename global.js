@@ -36,8 +36,6 @@ function loadPage(pagePath, pageName = '') {
     page.css = `/pages/${parts[0]}/${parts[0]}.css`;
     page.js = `/pages/${parts[0]}/${parts[0]}.js`;
 
-    console.log(page);
-
     // Carrega componentes da página
     $('#pageCSS').load(page.css, () => {
         $('#pageHTML').load(page.html, () => {
