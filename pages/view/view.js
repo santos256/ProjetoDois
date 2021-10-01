@@ -5,6 +5,9 @@ $(document).ready(runPage);
 
 function runPage() {
 
+    //obtem o id do artigo da url
+    const id = location.search.replace('?', '');
+
     // Altera o título da página
     setTitle(pageTitle);
 
