@@ -1,17 +1,20 @@
 $(document).ready(runPage);
 
-// Formulário
+// Formulário de comentário
 var commentForm = `
 <form id="cForm" name="comment-form">
     <textarea id="commentText" placeholder="Comente aqui..."></textarea>
-    <button type="submit">Comentar</buttom>
+    <p>
+        <button type="submit" class="btn primary" id="commentSend" title="Enviar comentário">Enviar</button>
+        <small class="grey">Suporta somente texto.</small>
+    </p>
 </form>
 `;
 
-// Dados do usuário comentador
+// Dados do usuário comentarista
 var commentUser = {};
 
-// Id do artigo
+// Id do artigo sendo comentado
 var commentArticle;
 
 // Mensagem para quem não está logado
@@ -59,9 +62,14 @@ function runPage() {
                         $(document).on('submit', '#cForm', sendComment);
 
                     } else {
+
+                        // Mensagem pedindo para logar
                         $('#commentForm').html(commentMsg);
                     }
                 });
+
+                // Exibe comentários deste artigo
+                showComments(doc.id);
 
             } else {                                // Se não tem artigo
                 loadPage('home');                   // Volta para página de artigos
@@ -72,19 +80,19 @@ function runPage() {
 // Processa envio do formulário
 function sendComment() {
 
-    // Obtém comentário digitado
+    // Obtém comentário digitado e sanitiza
     var commentText = sanitizeString($('#commentText').val());
 
     // Monta documento para o banco de dados
     var commentData = {
-        article: commentArticle,
-        displayName: commentUser.displayName,
-        email: commentUser.email,
-        photoURL: commentUser.photoURL,
-        uid: commentUser.uid,
-        date: getSystemDate(),
-        comment: commentText,
-        status: 'ativo' // Se usar pré-moderação escreva 'inativo'
+        article: commentArticle,                // Id do artigo que esta sendo comentado
+        displayName: commentUser.displayName,   // Nome do comentarista
+        email: commentUser.email,               // E-mail do comentarista
+        photoURL: commentUser.photoURL,         // Foto do comentarista
+        uid: commentUser.uid,                   // Id do comentarista
+        date: getSystemDate(),                  // Data do comentário em 'system date'
+        comment: commentText,                   // Comentário enviado
+        status: 'ativo'                         // Se usar pré-moderação escreva 'inativo'
     };
 
     // Salva no database
@@ -110,4 +118,48 @@ function sendComment() {
 
     // Conclui sem fazer mais nada
     return false;
+}
+
+
+// Exibe comentários deste artigo
+function showComments(articleId) {
+
+    db.collection('comments')
+    .where('article', '==', articleId)
+    .where('status', '==', 'ativo')
+    .orderBy('date', 'desc')
+    .onSnapshot((querySnapshot) => {
+
+        // Inicializa lista de artigos
+        var commentList = '';
+
+        // Obtém um artigo por loop
+        querySnapshot.forEach((doc) => {
+
+            // Armazena dados do artigo em 'cData'
+            cData = doc.data();
+
+            // Primeiro nome do usuário
+            firstName = cData.displayName.split(' ');
+
+            // Formata a date
+            brDate = getBrDate(cData.date);
+
+            // Monta lista de artigos
+            commentList += `
+<div class="comment-item">
+    <div class="comment-autor-date">
+        <img class="comment-image" src="${cData.photoURL}" alt="${cData.displayName}">
+        <span>Por ${firstName[0]} em ${brDate}.</span>
+    </div>
+    <div class="comment-text">${cData.comment}</div>
+</div>
+            `;
+        });
+
+        // Atualiza a view com a lista de artigos
+        $('#commentList').html(commentList);
+        commentList = '';
+    });
+
 }
