@@ -1,89 +1,170 @@
 /***** Configurações do aplicativo *****/
+var siteName = "ProjetoDois"; // Define nome do site
+var user; // Global que armazenará dados do usuário logado
 
-// Nome do site
-var siteName = 'ProjetoDois';
+$(document).ready(runApp); // Quando documento estiver pronto, executa aplicativo
 
-// Armazena dados do usuário logado
-var user;
-
-// Quando documento estiver pronto, executa JavaScript
-$(document).ready(runApp);
-
-/** Aplicativo principal */
+/***** Aplicativo principal (Eventos) *****/
 function runApp() {
+  loadPage("home"); // Carrega página inicial
 
-    // Carrega página inicial
-    loadPage('home');
+  $(document).on("click", "#login", login); // Monitora cliques no login
+  $(document).on("click", "a", routerLink); // Monitora cliques nos links
+  $(document).on("click", ".modal", closeModal); // Monitora cliques no modal
 
-    // Monitora cliques nos links
-    $(document).on('click', 'a', routerLink);
+  // Se alguém fizer login/logout (observer)...
+  firebase.auth().onAuthStateChanged((userData) => {
+    if (userData) {
+      // Se tem usuário logado
+      user = userData; // Atualiza a global 'user' com dados do usuário
 
+      // Atualiza view --> <nav>...</nav>
+      $("#userInOut").html(`
+<a id="profile" href="profile" class="user-logo" title="${user.displayName}">
+  <img src="${user.photoURL}" alt="${user.displayName}"><span>Perfil</span>
+</a>`);
+    } else {
+      // Se não tem usuário logado
+      user = {}; // Esvazia a global 'user'
+
+      // Atualiza view --> <nav>...</nav>
+      $("#userInOut").html(`
+<a id="login" class="user-logo" title="Entrar / Login">
+  <img src="/img/user.png" alt="Logue-se!"><span>Entrar</span>
+</a>`);
+    }
+  });
 }
 
 // Carrega uma página completa
-function loadPage(pagePath, pageName = '') {
+function loadPage(pagePath, pageName = "") {
+  var page = {}; // Armazena dados da rota
+  var parts = pagePath.split("?"); // Divide a rota em partes
 
-    // Variáveis da função
-    var page = {};
+  // Gera endereço da página
+  if (parts.length == 1) {
+    // Se é uma rota simples
+    page.url = `/${parts[0]}`; // Define endereço da página
+  } else {
+    // Se a rota contém variáveis (search) após '?'
+    page.url = `/${parts[0]}?${parts[1]}`; // Define endereço da página
+  }
 
-    // Divide a rota em partes
-    var parts = pagePath.split('?');
+  // Gera caminhos para HTML, CSS e JS
+  page.html = `/pages/${parts[0]}/${parts[0]}.html`;
+  page.css = `/pages/${parts[0]}/${parts[0]}.css`;
+  page.js = `/pages/${parts[0]}/${parts[0]}.js`;
 
-    // Gera rota para HTML
-    if (parts.length == 1) {
-        page.html = `/pages/${parts[0]}/${parts[0]}.html`;
-        page.url = `/${parts[0]}`;
-    } else {
-        page.html = `/pages/${parts[0]}/${parts[0]}.html?${parts[1]}`;
-        page.url = `/${parts[0]}?${parts[1]}`;
-    }
-
-    // Gera rotas para CSS e JS
-    page.css = `/pages/${parts[0]}/${parts[0]}.css`;
-    page.js = `/pages/${parts[0]}/${parts[0]}.js`;
-
-    // Carrega componentes da página
-    $('#pageCSS').load(page.css, () => {
-        $('#pageHTML').load(page.html, () => {
-            $.getScript(page.js, () => {
-
-                // Atualiza URL da aplicação
-                window.history.replaceState('', '', page.url);
-            });
-        });
+  // Carrega componentes da página
+  $("#pageCSS").load(page.css, () => {
+    // Carrega CSS
+    $("#pageHTML").load(page.html, () => {
+      // Carrega HTML
+      $.getScript(page.js, () => {
+        // Carrega e executa JavaScript
+        window.history.replaceState("", "", page.url); // Atualiza URL da aplicação
+      });
     });
+  });
 }
 
 // Roteamento de links
+// Observe o uso de intenso do 'return' para sair do app, caso o requisito seja cumprido
 function routerLink() {
+  // Obtém atributos do link
+  var href = $(this).attr("href"); // Obtém valor de 'href' do link clicado
+  var target = $(this).attr("target"); // Obtém valor de 'target' do link clicado
 
-    // Obtém atributos do link
-    var href = $(this).attr('href');
-    var target = $(this).attr('target');
+  // Se 'href' não existe OU (||) é vazio, não faz nada
+  if (!href || href == "") return false;
 
-    // Resolver âncoras
-    if (href.substr(0, 1) == '#')           // Se o primeiro caractere é '#'
-        return true;                        // Devolve controle para o HTML
+  // Se o primeiro caractere é '#', é uma âncora
+  // Então, devolve controle para o HTML
+  if (href.substr(0, 1) == "#") return true;
 
+  // Se 'target="_blank" OU href="http://..." OU href="https://...", é um link externo...
+  // Então, devolve controle para o HTML
+  if (
+    target == "_blank" ||
+    href.substr(0, 7) == "http://" ||
+    href.substr(0, 8) == "https://"
+  )
+    return true;
 
-    // É um link externo...
-    if (
-        target == '_blank'                  // ... se target="_blank"
-        || href.substr(0, 7) == 'http://'   // ou, se começa com http://
-        || href.substr(0, 8) == 'https://'  // ou, se começa com https://
-    ) return true;                          // Devolve controle para o HTML
+  // Se é um link interno, uma rota, processa ela...
+  loadPage(href);
 
-    // Resolver links internos (rotas)
-    loadPage(href);
-
-    // Sai sem fazer nada
-    return false;
+  // Sai sem fazer mais nada
+  return false;
 }
 
 // Processa título da página. Tag <title>...</title>
-function setTitle(pageTitle = '') {
-    var title;                                      // Inicializa variável
-    if (pageTitle == '') title = siteName;          // Se não definiu um título, usa o nome do app
-    else title = `${siteName} .:. ${pageTitle}`;    // Senão, usa este formato
-    $('title').text(title);                         // Escreve na tag <title>
+function setTitle(pageTitle = "") {
+  var title; // Inicializa variável
+  // Se não definiu um título, usa o nome do app
+  if (pageTitle == "") title = siteName;
+  // Senão, usa este formato
+  else title = `${siteName} .:. ${pageTitle}`;
+  $("title").text(title); // Escreve na tag <title>
+}
+
+// Formata uma 'system date' (YYYY-MM-DD HH:II:SS) para 'Br date' (DD/MM/YYYY HH:II:SS)
+function getBrDate(dateString) {
+  var p1 = dateString.split(" "); // Separa data e hora
+  var p2 = p1[0].split("-"); // Separa partes da data
+  return `${p2[2]}/${p2[1]}/${p2[0]} ${p1[1]}`; // Remonta partes da data e hora
+}
+
+// Gera a data atual em formato system date "YYYY-MM-DD HH:II:SS"
+function getSystemDate() {
+  var yourDate = new Date(); // Obtém a data atual do navegador
+  var offset = yourDate.getTimezoneOffset(); // Obtém o fusohorário
+  yourDate = new Date(yourDate.getTime() - offset * 60 * 1000); // Ajusta o fusohorário
+  returnDate = yourDate.toISOString().split("T"); // Separa data da hora
+  returnTime = returnDate[1].split("."); // Separa partes da data
+  return `${returnDate[0]} ${returnTime[0]}`; // Formata data como system date
+}
+
+// Faz login de usuário
+function login() {
+  logout(); // Força logout
+  var provider = new firebase.auth.GoogleAuthProvider(); // Seleciona o provedor de autenticação
+  // Autenticação usando 'popup', a mais básica que existe
+  firebase
+    .auth()
+    .signInWithPopup(provider)
+    .then((result) => {
+      // Se logou, exibe um modal cumprimentando o usuário
+      var modalText = `<strong>Olá ${result.user.displayName}!</strong><br><br>Você já pode usar nosso conteúdo restrito...`;
+      $("#modalLogin .modal-title").html("Bem-vinda(o)!");
+      $("#modalLogin .modal-text").html(modalText);
+      $("#modalLogin").show("fast");
+
+      // Fecha o modal em 15 segundos (15000 ms)
+      setTimeout(() => {
+        $("#modalLogin").hide("fast");
+      }, 15000);
+    })
+    .catch((error) => {
+      console.error(`Ocorreram erros ao fazer login: ${error}`);
+    });
+}
+
+// Fecha modal
+function closeModal() {
+  modalName = $(this).parent().attr("id"); // Obtém o ID do pai do modal clicado
+  $(`#${modalName}`).hide("fast"); // Oculta o pai do modal clicado
+  return false;
+}
+
+// Logout de usuario
+function logout() {
+  // Logout padrão do Firebase
+  firebase
+    .auth()
+    .signOut()
+    .then(() => {
+      // Após logout, retorna para a 'home'
+      loadPage("home");
+    });
 }
