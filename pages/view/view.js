@@ -69,7 +69,13 @@ function runPage() {
         });
 }
 
+// Processa envio do formulário
 function sendComment() {
+
+    // Obtém comentário digitado
+    var commentText = sanitizeString($('#commentText').val());
+
+    // Monta documento para o banco de dados
     var commentData = {
         article: commentArticle,
         displayName: commentUser.displayName,
@@ -77,10 +83,31 @@ function sendComment() {
         photoURL: commentUser.photoURL,
         uid: commentUser.uid,
         date: getSystemDate(),
-        comment: '',
+        comment: commentText,
         status: 'ativo' // Se usar pré-moderação escreva 'inativo'
     };
 
-    console.log(commentData);
+    // Salva no database
+    db.collection('comments').add(commentData)
+        .then(() => {
+
+            // Se deu certo, exibe 'modal'
+            $('#modalComment').show('fast');
+
+            //  Limpa campo de comentário
+            $('#commentText').val('');
+
+            // Fecha o modal em 15 segundos (15000 ms)
+            setTimeout(() => {
+                $("#modalComment").hide('fast');
+            }, 15000);
+        })
+        .catch((error) => {
+
+            // Se deu errado, exibe mensagem de erro no console
+            console.error(`Ocorreu erro ao salvar no DB: ${error}`);
+        });
+
+    // Conclui sem fazer mais nada
     return false;
 }
