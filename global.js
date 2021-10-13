@@ -2,6 +2,11 @@
 var siteName = "ProjetoDois"; // Define nome do site
 var user; // Global que armazenará dados do usuário logado
 
+if ("serviceWorker" in navigator) {
+  // register service worker
+  navigator.serviceWorker.register("service-worker.js");
+}
+
 $(document).ready(runApp); // Quando documento estiver pronto, executa aplicativo
 
 /***** Aplicativo principal (Eventos) *****/
