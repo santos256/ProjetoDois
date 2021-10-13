@@ -5,7 +5,7 @@
     "scope": "./",
     "icons": [
       {
-        "src": "img/logo01.png",
+        "src": "img/logo01_512.png",
         "sizes": "512x512",
         "type": "image/png"
       }
